@@ -330,21 +330,29 @@ async function releaseMajorOrMinor(semver, nextVersion) {
 async function releasePatch(currentVersion, nextVersion) {
   const releaseBranch = ['release', 'patch', nextVersion].join('/')
 
-  await confirmRuns(
-    ask`Ok to checkout new branch ${releaseBranch} from ${currentVersion} tag?`,
-    // See https://git-scm.com/book/en/v2/Git-Basics-Tagging
-    // Scroll down to "Checking out Tags".
-    () => $`git checkout -b ${releaseBranch} ${currentVersion}`,
-    { exit: true }
-  )
+  const releaseBranchExists = await branchExists(releaseBranch)
 
-  await pushAndDiff(releaseBranch, currentVersion)
-  await confirm('Does the diff look ok?', { exit: true })
+  if (!releaseBranchExists) {
+    await confirmRuns(
+      ask`Ok to checkout new branch ${releaseBranch} from ${currentVersion} tag?`,
+      // See https://git-scm.com/book/en/v2/Git-Basics-Tagging
+      // Scroll down to "Checking out Tags".
+      () => $`git checkout -b ${releaseBranch} ${currentVersion}`,
+      { exit: true }
+    )
+  }
 
-  await confirm(ask`Done cherry picking?`, { exit: true })
+  const releaseBranchExistsOnOrigin = await branchExistsOnOrigin(releaseBranch)
 
-  await pushAndDiff(releaseBranch, currentVersion)
-  await confirm('Does the diff look ok?', { exit: true })
+  if (!releaseBranchExistsOnOrigin) {
+    await pushAndDiff(releaseBranch, currentVersion)
+    await confirm('Does the diff look ok?', { exit: true })
+
+    await confirm(ask`Done cherry picking?`, { exit: true })
+
+    await pushAndDiff(releaseBranch, currentVersion)
+    await confirm('Does the diff look ok?', { exit: true })
+  }
 
   await cleanInstallUpdate(nextVersion)
   notifier.notify('done')
@@ -367,7 +375,8 @@ async function releasePatch(currentVersion, nextVersion) {
   // await confirmRuns(
   //   ask`Everything passed local QA. Are you ready to push your branch to GitHub and publish to NPM?`,
   //   [
-  //     () => $`git push && git push --tags`,
+  //     () => $`git push`,
+  //     () => $`git push --follow-tags`,
   //     // We've had an issue with this one.
   //     async () => {
   //       try {
@@ -458,6 +467,20 @@ async function branchExists(branch) {
     .map((branch) => branch.trim())
 
   if (branches.includes(branch)) {
+    return true
+  }
+
+  return false
+}
+
+/**
+ * @param {string} branch
+ */
+async function branchExistsOnOrigin(branch) {
+  const { stdout } =
+    await $`git ls-remote --heads git@github.com:redwoodjs/redwood ${branch}`
+
+  if (stdout.length) {
     return true
   }
 
