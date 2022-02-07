@@ -334,7 +334,7 @@ async function releasePatch(currentVersion, nextVersion) {
     ask`Ok to checkout new branch ${releaseBranch} from ${currentVersion} tag?`,
     // See https://git-scm.com/book/en/v2/Git-Basics-Tagging
     // Scroll down to "Checking out Tags".
-    () => $`git checkout ${releaseBranch} -b ${currentVersion}`,
+    () => $`git checkout -b ${releaseBranch} ${currentVersion}`,
     { exit: true }
   )
 
