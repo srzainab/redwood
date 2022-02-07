@@ -32,9 +32,9 @@ import {
   ok,
   rocketBoxen,
 } from './prompts.mjs'
-import updateNextReleasePullRequestsMilestone, {
+import updatePullRequestsMilestone, {
   closeMilestone,
-} from './updateNextReleasePullRequestsMilestone.mjs'
+} from './updatePullRequestsMilestone.mjs'
 
 let milestone
 
@@ -45,9 +45,11 @@ export default async function release() {
   await validateGitTag(nextVersion)
   await validateMergedPRs(semver)
 
+  const fromTitle = 'next-release' + (semver === 'patch' ? '-patch' : '')
+
   milestone = await confirmRuns(
-    ask`Do you want to update next-release PRs' milestone to ${nextVersion}?`,
-    () => updateNextReleasePullRequestsMilestone(nextVersion)
+    ask`Do you want to update ${fromTitle} PRs' milestone to ${nextVersion}?`,
+    () => updatePullRequestsMilestone(fromTitle, nextVersion)
   )
 
   // Do the release.
@@ -320,38 +322,16 @@ async function releaseMajorOrMinor(semver, nextVersion) {
 }
 
 /**
- * Check if the release branch already exists.
- * If it does, offer to check it out. Otherwise, offer to create it.
- *
- * @param {string} releaseBranch
- */
-// async function releaseBranchExists(releaseBranch) {
-//   const gitBranchPO = await $`git branch`
-
-//   const branches = gitBranchPO.stdout
-//     .trim()
-//     .split('\n')
-//     .map((branch) => branch.trim())
-
-//   if (branches.includes(releaseBranch)) {
-//     return true
-//   }
-
-//   return false
-// }
-
-/**
- * This is a WIP.
- *
  * @param {string} nextVersion
  */
 async function releasePatch(currentVersion, nextVersion) {
-  const previousReleaseBranch = ['tag', currentVersion].join('/')
   const releaseBranch = ['release', 'patch', nextVersion].join('/')
 
   await confirmRuns(
-    ask`Ok to checkout new branch ${releaseBranch} from ${previousReleaseBranch}?`,
-    () => $`git checkout ${previousReleaseBranch} -b ${releaseBranch}`,
+    ask`Ok to checkout new branch ${releaseBranch} from ${currentVersion} tag?`,
+    // See https://git-scm.com/book/en/v2/Git-Basics-Tagging
+    // Scroll down to "Checking out Tags".
+    () => $`git checkout ${releaseBranch} -b ${currentVersion}`,
     { exit: true }
   )
 
@@ -362,23 +342,56 @@ async function releasePatch(currentVersion, nextVersion) {
     { exit: true }
   )
 
-  await pushAndDiff(releaseBranch, currentVersion, { exit: true })
+  await pushAndDiff(releaseBranch, currentVersion)
   await confirm('Does the diff look ok?', { exit: true })
 
   await cleanInstallUpdate(nextVersion)
   notifier.notify('done')
 
   await confirm(
-    check`The package versions have been updated. Does everything look right?`,
+    check`The package versions have been updated. Does everything look ok?`,
     { exit: true }
   )
 
   await commitTagQA(nextVersion)
   notifier.notify('done')
 
-  // Merge commit
+  // I think we need to do a merge commit:
+  //
   // await $`git checkout main`
   // await $`git branch -d release/patch/${nextVersion}`
+  //
+  // And I need to confirm if these steps are the same...
+  //
+  // await confirmRuns(
+  //   ask`Everything passed local QA. Are you ready to push your branch to GitHub and publish to NPM?`,
+  //   [
+  //     () => $`git push && git push --tags`,
+  //     // We've had an issue with this one.
+  //     async () => {
+  //       try {
+  //         await $`yarn lerna publish from-package`
+  //         console.log(rocketBoxen(`Released ${c.green(nextVersion)}`))
+  //       } catch (e) {
+  //         console.log(
+  //           `Couldn't run ${c.green('yarn lerna publish from-package')}`
+  //         )
+  //         console.log(e)
+  //       }
+  //     },
+  //   ],
+  //   { exit: true }
+  // )
+  //
+  // await confirmRuns(ask`Do you want to generate release notes?`, () =>
+  //   generateReleaseNotes(nextVersion)
+  // )
+  //
+  // if (milestone) {
+  //   await confirmRuns(ask`Ok to close milestone ${nextVersion}?`, () =>
+  //     closeMilestone(milestone.number)
+  //   )
+  // }
 }
 
 /**
@@ -421,7 +434,7 @@ function commitTagQA(nextVersion) {
  */
 function pushAndDiff(releaseBranch, currentVersion) {
   return confirmRuns(
-    ask`Ok to push new branch ${releaseBranch} and open diff?`,
+    ask`Ok to push new branch ${releaseBranch} to GitHub and open diff?`,
     [
       () => $`git push origin ${releaseBranch}`,
       () =>
@@ -429,4 +442,23 @@ function pushAndDiff(releaseBranch, currentVersion) {
     ],
     { exit: true }
   )
+}
+
+/**
+ * @param {string} branch
+ */
+// eslint-disable-next-line no-unused-vars
+async function branchExists(branch) {
+  const { stdout } = await $`git branch`
+
+  const branches = stdout
+    .trim()
+    .split('\n')
+    .map((branch) => branch.trim())
+
+  if (branches.includes(branch)) {
+    return true
+  }
+
+  return false
 }

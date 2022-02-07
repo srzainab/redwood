@@ -5,7 +5,7 @@ import { hideBin } from 'yargs/helpers'
 
 import generateReleaseNotes from './generateReleaseNotes.mjs'
 import release from './release.mjs'
-import updateNextReleasePullRequestsMilestone from './updateNextReleasePullRequestsMilestone.mjs'
+import updatePullRequestsMilestone from './updatePullRequestsMilestone.mjs'
 
 yargs(hideBin(process.argv))
   .scriptName('release')
@@ -22,15 +22,21 @@ yargs(hideBin(process.argv))
     (argv) => generateReleaseNotes(argv.milestone)
   )
   .command(
-    'update-next-release-prs-milestone <milestone>',
-    "Update next-release PRs' milestone. Note that this creates the milestone if it doesn't exist",
+    'update-prs-milestone',
+    "Update PRs' milestone from something to something",
     (yargs) => {
-      yargs.positional('milestone', {
-        describe: 'The milestone to update next-release PRs to',
+      yargs.option('from', {
+        demandOption: true,
+        describe: 'The milestone to PRs from',
+        type: 'string',
+      })
+      yargs.option('to', {
+        demandOption: true,
+        describe: 'The milestone to PRs to',
         type: 'string',
       })
     },
-    (argv) => updateNextReleasePullRequestsMilestone(argv.milestone)
+    ({ from, to }) => updatePullRequestsMilestone(from, to)
   )
   .help()
   .parse()
