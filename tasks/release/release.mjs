@@ -293,7 +293,10 @@ async function releaseMajorOrMinor(semver, nextVersion) {
   await confirmRuns(
     ask`Everything passed local QA. Are you ready to push your branch to GitHub and publish to NPM?`,
     [
-      () => $`git push && git push --tags`,
+      () => $`git push`,
+      // This is supposedly safer than `git push --tags`.
+      // See https://git-scm.com/book/en/v2/Git-Basics-Tagging.
+      () => $`git push --follow-tags`,
       // We've had an issue with this one.
       async () => {
         try {
@@ -337,10 +340,8 @@ async function releasePatch(currentVersion, nextVersion) {
 
   await pushAndDiff(releaseBranch, currentVersion)
   await confirm('Does the diff look ok?', { exit: true })
-  await confirm(
-    ask`Cherry pick and handle the conflicts—tell me when you're done`,
-    { exit: true }
-  )
+
+  await confirm(ask`Done cherry picking?`, { exit: true })
 
   await pushAndDiff(releaseBranch, currentVersion)
   await confirm('Does the diff look ok?', { exit: true })
