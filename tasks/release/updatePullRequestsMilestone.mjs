@@ -1,6 +1,6 @@
 /* eslint-env node, es2021 */
 import octokit from './octokit.mjs'
-import { confirm, ask, check } from './prompts.mjs'
+import { confirm, ask, check, ok } from './prompts.mjs'
 
 /**
  * @param {'next-release' | 'next-release-patch'} fromTitle
@@ -27,6 +27,11 @@ export default async function updatePullRequestsMilestone(fromTitle, toTitle) {
   const fromMilestoneId = (await getMilestone(fromTitle)).id
 
   const pullRequestIds = await getPullRequestIdsWithMilestone(fromMilestoneId)
+
+  if (!pullRequestIds.length) {
+    console.log(ok`No pull requests with milestone ${fromTitle}`)
+    return
+  }
 
   const updateOk = await confirm(
     ask`Ok to update the milestone of ${pullRequestIds.length} PRs from ${fromTitle} to ${toTitle}?`
