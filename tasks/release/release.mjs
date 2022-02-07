@@ -32,9 +32,7 @@ import {
   ok,
   rocketBoxen,
 } from './prompts.mjs'
-import updatePullRequestsMilestone, {
-  closeMilestone,
-} from './updatePullRequestsMilestone.mjs'
+import updatePRsMilestone, { closeMilestone } from './updatePRsMilestone.mjs'
 
 let milestone
 
@@ -49,7 +47,8 @@ export default async function release() {
 
   milestone = await confirmRuns(
     ask`Do you want to update ${fromTitle} PRs' milestone to ${nextVersion}?`,
-    () => updatePullRequestsMilestone(fromTitle, nextVersion)
+    () => updatePRsMilestone(fromTitle, nextVersion),
+    { name: 'update-prs-milestone' }
   )
 
   // Do the release.
@@ -271,7 +270,7 @@ async function releaseMajorOrMinor(semver, nextVersion) {
   await confirmRuns(
     ask`Ok to checkout new branch ${releaseBranch}?`,
     () => $`git checkout -b ${releaseBranch}`,
-    { exit: true }
+    { name: 'checkout', exit: true }
   )
 
   await confirm(
@@ -313,8 +312,10 @@ async function releaseMajorOrMinor(semver, nextVersion) {
     { exit: true }
   )
 
-  await confirmRuns(ask`Do you want to generate release notes?`, () =>
-    generateReleaseNotes(nextVersion)
+  await confirmRuns(
+    ask`Do you want to generate release notes?`,
+    () => generateReleaseNotes(nextVersion),
+    { name: 'generate-release-notes' }
   )
 
   if (milestone) {
@@ -338,7 +339,7 @@ async function releasePatch(currentVersion, nextVersion) {
       // See https://git-scm.com/book/en/v2/Git-Basics-Tagging
       // Scroll down to "Checking out Tags".
       () => $`git checkout -b ${releaseBranch} ${currentVersion}`,
-      { exit: true }
+      { name: 'checkout', exit: true }
     )
   }
 
@@ -415,7 +416,7 @@ function cleanInstallUpdate(nextVersion) {
       () => $`yarn install`,
       () => $`./tasks/update-package-versions ${nextVersion}`,
     ],
-    { exit: true }
+    { name: 'clean-install-update', exit: true }
   )
 }
 
@@ -433,6 +434,7 @@ function commitTagQA(nextVersion) {
       () => $`yarn test`,
     ],
     {
+      name: 'commit-tag-qa',
       exit: true,
     }
   )

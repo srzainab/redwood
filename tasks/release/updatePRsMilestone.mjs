@@ -6,7 +6,7 @@ import { confirm, ask, check, ok } from './prompts.mjs'
  * @param {'next-release' | 'next-release-patch'} fromTitle
  * @param {string} toTitle
  */
-export default async function updatePullRequestsMilestone(fromTitle, toTitle) {
+export default async function updatePRsMilestone(fromTitle, toTitle) {
   let milestone = await getMilestone(toTitle)
 
   if (!milestone) {

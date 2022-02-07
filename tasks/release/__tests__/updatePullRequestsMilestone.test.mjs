@@ -3,11 +3,11 @@ import { rest, graphql } from 'msw'
 import { setupServer } from 'msw/node'
 import prompts from 'prompts'
 
-import updatePullRequestsMilestone, {
+import updatePRsMilestone, {
   GET_MILESTONES,
   GET_PULL_REQUEST_IDS,
   UPDATE_PULL_REQUEST_MILESTONE,
-} from '../updatePullRequestsMilestone.mjs'
+} from '../updatePRsMilestone.mjs'
 
 /**
  * MSW setup
@@ -170,7 +170,7 @@ beforeAll(() => server.listen())
 
 afterAll(() => server.close())
 
-describe('updatePullRequestsMilestone', () => {
+describe('updatePRsMilestone', () => {
   it('uses the right queries', () => {
     expect(GET_MILESTONES).toMatchInlineSnapshot(`
       "
@@ -231,10 +231,7 @@ describe('updatePullRequestsMilestone', () => {
       true,
     ])
 
-    const milestone = await updatePullRequestsMilestone(
-      'next-release',
-      'v0.42.1'
-    )
+    const milestone = await updatePRsMilestone('next-release', 'v0.42.1')
     const { node_id: id, ...rest } = nextVersionMilestone
     expect(milestone).toEqual({ id, ...rest })
   })
@@ -249,10 +246,7 @@ describe('updatePullRequestsMilestone', () => {
       true,
     ])
 
-    const milestone = await updatePullRequestsMilestone(
-      'next-release-patch',
-      'v0.42.1'
-    )
+    const milestone = await updatePRsMilestone('next-release-patch', 'v0.42.1')
     const { node_id: id, ...rest } = nextVersionMilestone
     expect(milestone).toEqual({ id, ...rest })
   })
